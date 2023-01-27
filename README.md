@@ -25,6 +25,15 @@ func main() {
 
   f.Compile("abcg$")
   res = f.Match("abcgagagdsajd") // false
+
+  f.Compile("abc[0-9]$")
+  res = f.Match("abc5") // true
+
+  f.Compile("abc[A-Z]$")
+  res = f.Match("abcG") // true
+
+  f.Compile("abc[xyz]$")
+  res = f.Match("abcy") // true
 }
 
 ```

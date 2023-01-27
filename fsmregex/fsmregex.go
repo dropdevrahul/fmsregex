@@ -1,6 +1,9 @@
 package fsmregex
 
-import "fmt"
+import (
+	"errors"
+	"fmt"
+)
 
 const FSMENDLINE = '$'
 const ASCIISIZE = 128
@@ -28,33 +31,98 @@ func (f *FSM) addCol(c [ASCIISIZE]int) {
 	f.c = append(f.c, c)
 }
 
-func (f *FSM) Compile(s string) {
+func (f *FSM) Compile(s string) error {
 	// reset f
 	f.c = [][ASCIISIZE]int{}
 	f.state = 0
 
 	f.addCol([ASCIISIZE]int{}) // default state
-	for _, c := range []rune(s) {
+	chars := []rune(s)
+	for i := 0; i < len(chars); i++ {
+		c := chars[i]
+
 		switch c {
+		// support for $ end of regex string to be matched
+		// should not have any characters after char before
+		// $ in regex
 		case FSMENDLINE:
 			// also handles FSMENDLINE
 			t := [ASCIISIZE]int{}
+
 			t[FSMENDLINE] = len(f.c) + 1
 			f.addCol(t)
 		case '.':
 			// . means check for match any printable character
 			t := [ASCIISIZE]int{}
 			l := len(f.c)
+
 			for i := 32; i <= 127; i++ {
 				t[i] = l + 1
 			}
+
+			f.addCol(t)
+		case '[':
+			// match range
+			// find closing ] or raise error
+			t := [ASCIISIZE]int{}
+			i += 1
+			g := []rune{}
+
+			// in case we have range like [16789]
+			for k := 1; i < len(chars); i++ {
+				if chars[i] == ']' {
+					break
+				}
+				if k == 2 && chars[i] == '-' {
+					if chars[i+2] != ']' {
+						return errors.New("invalid range")
+					}
+					// check for ranges a-z A-Z 1-n
+					if (chars[i-1] < 'a' && chars[i-1] > 'z') &&
+						(chars[i+1] < 'a' || chars[i+1] > 'z') {
+						return errors.New("Invalid range")
+					}
+					if (chars[i-1] < 'A' && chars[i-1] > 'Z') &&
+						(chars[i+1] < 'A' || chars[i+1] > 'Z') {
+						return errors.New("Invalid range")
+					}
+					if chars[i-1] < '0' && chars[i+1] > '9' {
+						return errors.New("Invalid range")
+					}
+
+					// valid range
+					for r := chars[i-1] + 1; r <= chars[i+1]; r++ {
+						g = append(g, r)
+						fmt.Printf("g: %d len t %d \n", int(r), int(len(t)))
+						t[r] = len(f.c) + 1
+					}
+
+					i += 2
+					//break from for loop
+					break
+				}
+
+				g = append(g, chars[i])
+				t[chars[i]] = len(f.c) + 1
+				k += 1
+			}
+
+			//if g is still empty till end of string
+			// error
+			if len(g) == 0 && i == len(chars) {
+				return errors.New("[ has no end ]")
+			}
+
 			f.addCol(t)
 		default:
 			t := [ASCIISIZE]int{}
+
 			t[int(c)] = len(f.c) + 1
 			f.addCol(t)
 		}
 	}
+
+	return nil
 }
 
 func (f *FSM) Match(s string) bool {

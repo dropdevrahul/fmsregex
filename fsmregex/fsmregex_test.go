@@ -58,6 +58,41 @@ func TestMatch(t *testing.T) {
 			regex: "abc.g",
 			exp:   false,
 		},
+		"group-[range]-check": {
+			input: "abc1d",
+			regex: "abc[12345]d$",
+			exp:   true,
+		},
+		"group-[range]-check-last-char-]": {
+			input: "abc1",
+			regex: "abc[12345]$",
+			exp:   true,
+		},
+		"group-[0-9]-check-1": {
+			input: "abc1",
+			regex: "abc[0-9]$",
+			exp:   true,
+		},
+		"group-[0-9]-check-2": {
+			input: "abc8",
+			regex: "abc[0-9]$",
+			exp:   true,
+		},
+		"group-[0-9]-check-3": {
+			input: "abc9",
+			regex: "abc[0-9]$",
+			exp:   true,
+		},
+		"group-[a-b]-check-3": {
+			input: "abcbabc",
+			regex: "abc[a-b]",
+			exp:   true,
+		},
+		"group-[a-b]-check-4": {
+			input: "hello a 8 abc",
+			regex: "hello.[a-z].[8-8]",
+			exp:   true,
+		},
 	}
 
 	for tl, tc := range cases {
